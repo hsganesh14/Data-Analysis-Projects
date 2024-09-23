@@ -1,0 +1,178 @@
+---
+title: "Google Case study"
+author: "Ganesh"
+date: "2024-08-22"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+library(tidyverse)
+library(lubridate)
+library(janitor)
+library(skimr)
+library(janitor)
+library(readr)
+#installing and loading the packages
+
+df1<-read.csv("C:/Users/Vd Ganesh/Desktop/Google case study/aug_2023_trip.csv")
+View(df1)
+df2<-read.csv("C:/Users/Vd Ganesh/Desktop/Google case study/sep_2023_trip.csv")
+head(df2)
+df3<-read.csv("C:/Users/Vd Ganesh/Desktop/Google case study/oct_2023_trip.csv")
+df4<-read.csv("C:/Users/Vd Ganesh/Desktop/Google case study/nov_2023_trip.csv")
+df5<-read.csv("C:/Users/Vd Ganesh/Desktop/Google case study/dec_2023_trip.csv")
+df6<-read.csv("C:/Users/Vd Ganesh/Desktop/Google case study/jan_2024_trip.csv")
+df6<-read.csv("C:/Users/Vd Ganesh/Desktop/Google case study/feb_2024_trip.csv")
+df7<-read.csv("C:/Users/Vd Ganesh/Desktop/Google case study/feb_2024_trip.csv")
+df8<-read.csv("C:/Users/Vd Ganesh/Desktop/Google case study/mar_2024_trip.csv")
+df9<-read.csv("C:/Users/Vd Ganesh/Desktop/Google case study/apr_2024_trip.csv")
+df10<-read.csv("C:/Users/Vd Ganesh/Desktop/Google case study/may_2024_trip.csv")
+df11<-read.csv("C:/Users/Vd Ganesh/Desktop/Google case study/jun_2024_trip.csv")
+df12<-read.csv("C:/Users/Vd Ganesh/Desktop/Google case study/july_2024_trip.csv")
+
+#importing the read.csv files from computer individually
+
+df_all <-rbind(df1,df2,df3,df4,df5,df6,df7,df8,df9,df10,df11,df12)
+#merging all the individuals into one by using rbind function
+
+colnames(df_all) #getting column names after merging
+head(df_all) #getting top 6 rows
+glimpse(df_all) # getting brief information about the data set
+
+df_all <- df_all %>%
+drop_na() %>%      # Remove rows with missing data
+distinct() %>%     # Remove duplicate rows
+select(-start_lat, -start_lng, -end_lat, -end_lng)  # Remove specific columns
+
+colnames(df_all) #columns after deleting some columns
+
+df_all$started_at <- as.POSIXct(df_all$started_at, format = "%Y-%m-%d %H:%M:%S")  # Adjust format if needed
+df_all$ended_at <- as.POSIXct(df_all$ended_at, format="%Y-%m-%d %H:%M:%S")
+#CONVERTING started_at and ended_at intp ymd-hms format
+library(lubridate)
+df_all$weekday_number<- wday(df_all$started_at)
+#adding a new column as weekday_num  by  taking the day by started _at 
+
+library(dplyr)
+library(lubridate)
+
+df_all <- df_all %>%
+  mutate(
+    weekday_name = wday(started_at, label = TRUE),
+    year = year(started_at),
+    month = month(started_at, label = TRUE),
+    year_month = paste(year, month, sep = " ")
+  )
+
+library(tidyverse)
+
+df_all$ride_length <- difftime(df_all$ended_at, df_all$started_at, units = "mins")
+#calculating ride length by subtracting started_at from ended_at
+
+summary_data <- df_all %>%
+group_by(member_casual) %>% #grouping by member_casual
+summarise(mean_ride_length = mean(ride_length, na.rm = TRUE))
+
+#summarising with the mean ride length by removing null values
+
+ggplot(summary_data, aes(x = member_casual, y = mean_ride_length)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(title = "Mean Ride Length by Membership Type",
+  x = "Membership Type",
+  y = "Mean Ride Length in min ") +
+  theme_minimal()
+#plotting graph by membership type against mean ride length
+
+
+library(dplyr)
+df_all %>%
+  group_by(member_casual) %>%
+  summarise(total_count = n())
+head(df_all)
+
+table(df_all$member_casual)
+
+total_length_member <- sum(df_all$ride_length[df_all$member_causal == "member"])
+#total length by member
+total_length_casual <- sum(df_all$ride_length[df_all$member_causal == "casual"])
+#total length by casual
+
+count_member <- sum(df_all$member_causal == "member")
+count_casual <- sum(df_all$member_causal == "casual")
+# calculating the total member and casual
+
+mean_length_member <- total_length_member / count_member
+mean_length_casual <- total_length_casual / count_casual
+#calculating the mean length 
+
+# Combine the results into a data frame for plotting
+total_length_results <- data.frame(
+  Category = c("Member", "Casual"),
+  Total_Ride_Length = c(total_length_member, total_length_casual),
+  Mean_Ride_Length = c(mean_length_member, mean_length_casual)
+)
+
+rides_by_weekday_number <- df_all %>%
+  group_by(weekday_number, member_casual) %>%
+  summarise(ride_length = n()) %>%
+  arrange(weekday_number)
+#calculating the rides by weekday number
+
+# Plotting the total rides by weekday_number and member/casual
+ggplot(rides_by_weekday_number, aes(x = weekday_number, y = ride_length, fill = member_casual)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Total Rides by Weekday (Number) for Members and Casuals",
+       x = "Weekday Number", 
+       y = "ride_length", 
+       fill = "Category") +
+  theme_minimal()
+
+
+mean_rides <- df_all %>%
+  group_by(weekday_number, member_casual) %>%
+  summarise(mean_ride_length = mean(ride_length, na.rm = TRUE)) %>%
+  ungroup()
+#calculating the mean_rides
+print(mean_rides)
+
+# Plot mean ride lengths
+ggplot(mean_rides, aes(x = factor(weekday_number), y = mean_ride_length, fill = member_casual)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(x = "Weekday Number (1 = Sunday)", y = "Mean Ride Length (minutes)", title = "Mean Ride Length per Weekday by Member and Casual")+
+  theme_minimal()
+
+summary_by_ym <- df_all %>%
+  group_by(member_casual, year_month) %>%
+  summarize(mean_rides = mean(ride_length))
+
+summary_by_ym$year_month <- factor(summary_by_ym$year_month, levels = unique(summary_by_ym$year_month))
+# Convert year_month to a factor with desired levels
+
+library(tidyverse)
+library(lubridate)
+
+ggplot(summary_by_ym, aes(x = year_month, y = mean_rides, fill = member_casual)) +
+  geom_col(position = "dodge") +
+  labs(x = "Month", y = "Mean Ride Length (minutes)",
+       title = "Mean Ride Length by Month for Members & Casuals") +
+  scale_fill_manual(values = c("steelblue", "orange")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(size = 3.5))
+
+# Saving the plot of Mean Ride Length by Membership Type
+ggsave("mean_ride_length_membership_type.png", width = 8, height = 6)
+
+# Saving the Total Rides by Weekday Plot
+ggsave("total_rides_by_weekday.png", width = 8, height = 6)
+
+# Saving the Mean Ride Length per Weekday Plot
+ggsave("mean_ride_length_per_weekday.png", width = 8, height = 6)
+
+# Saving the Mean Ride Length by Month Plot
+ggsave("mean_ride_length_plot.png", width = 8, height = 6)
+
+setwd("C:/Users/Vd Ganesh/Documents")
+write.csv(df_all, "cleaned_data.csv", row.names = FALSE)
